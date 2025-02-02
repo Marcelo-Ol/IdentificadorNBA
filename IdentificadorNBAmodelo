@@ -2,8 +2,11 @@ import config
 import requests
 import pandas
 import json
+import cv2
+import pytesseract
+import numpy as np
 
-API_KEY = config.ROBOFLOW_API_KEY
+API_KEY = config.ROBOFLOW_API_KEY # Altere para sua chave de API Roboflow
 MODEL_ID = "custom-workflow-object-detection-h43rn/3"
 IMAGE_PATH = "images/Celtics_1.jpg"
 jogadores = pandas.read_csv('BostonCelticsRoster.csv')
@@ -16,17 +19,30 @@ with open(IMAGE_PATH, "rb") as image_file:
 response = requests.post(url, files={"file": image_bytes})
 
 data = response.json()
-print(json.dumps(data, indent=2))
+image = cv2.imread(IMAGE_PATH)
 
-if "predictions" in data and len(data["predictions"]) > 0:
-    detected_number = int(data["predictions"][0]["class"])
-    print(f"Número identificado: {detected_number}")
+# Filtrar os objetos preditos que são números
+number_predictions = [pred for pred in data.get("predictions", []) if pred["class"] == "number"]
 
-    player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
+if number_predictions:
+    for pred in number_predictions:
+        x, y, w, h = int(pred["x"]), int(pred["y"]), int(pred["width"]), int(pred["height"])
 
-    if len(player_name) > 0:
-        print(f"Jogador identificado: {player_name[0]}")
-    else:
-        print("Jogador não encontrado")
+        # Cortar a imagem para obter o número identificado e converter para cinza
+        cropped_number = image[y-h//2:y+h//2, x-w//2:x+w//2]
+        gray = cv2.cvtColor(cropped_number, cv2.COLOR_BGR2GRAY)
+
+        recognized_number = pytesseract.image_to_string(gray, config="--psm 7").strip()
+        print(f"{recognized_number} encontrado na imagem")
+        if recognized_number.isdigit():
+            detected_number = int(recognized_number)
+            #Encontrar o jogador com o número identificado no .CSV
+            player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
+
+            if(len(player_name) > 0):
+                print(f"Jogador: {player_name[0]}, Numero: {detected_number}")
+            else:
+             print(f"Jogador não encontrado, Numero: {detected_number}")
+   
 else:
-    print("Número nao identificado")
+    print("Nenhum numero identificado na imagem")
