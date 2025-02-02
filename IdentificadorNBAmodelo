@@ -1,0 +1,32 @@
+import config
+import requests
+import pandas
+import json
+
+API_KEY = config.ROBOFLOW_API_KEY
+MODEL_ID = "custom-workflow-object-detection-h43rn/3"
+IMAGE_PATH = "images/Celtics_1.jpg"
+jogadores = pandas.read_csv('BostonCelticsRoster.csv')
+
+url = f"https://detect.roboflow.com/{MODEL_ID}?api_key={API_KEY}"
+
+with open(IMAGE_PATH, "rb") as image_file:
+    image_bytes = image_file.read()
+
+response = requests.post(url, files={"file": image_bytes})
+
+data = response.json()
+print(json.dumps(data, indent=2))
+
+if "predictions" in data and len(data["predictions"]) > 0:
+    detected_number = int(data["predictions"][0]["class"])
+    print(f"Número identificado: {detected_number}")
+
+    player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
+
+    if len(player_name) > 0:
+        print(f"Jogador identificado: {player_name[0]}")
+    else:
+        print("Jogador não encontrado")
+else:
+    print("Número nao identificado")
