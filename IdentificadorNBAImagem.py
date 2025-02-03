@@ -1,52 +1,55 @@
-import cv2
-from ultralytics import YOLO
-import pytesseract
-from PIL import Image
+import config
+import requests
 import pandas
+import cv2
+import pytesseract
+import numpy as np
+import re
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-model = YOLO('yolov8n.pt')
+API_KEY = config.ROBOFLOW_API_KEY # Altere para sua chave de API Roboflow
+MODEL_ID = "custom-workflow-object-detection-h43rn/3"
+IMAGE_PATH = "images/Celtics_2.jpg"
 jogadores = pandas.read_csv('BostonCelticsRoster.csv')
-image = cv2.imread("images/Celtics_1.jpg")
-altura, largura = image.shape[:2]
 
-results = model.predict(image)
-boxes = results[0].boxes.xyxy.cpu().numpy()
+url = f"https://detect.roboflow.com/{MODEL_ID}?api_key={API_KEY}"
 
-for box in boxes:
-    x1, y1, x2, y2 = map(int, box)
+with open(IMAGE_PATH, "rb") as image_file:
+    image_bytes = image_file.read()
 
-    # ignora pessoas na arquibancada
-    altura = y2 - y1
-    if y2 < altura * 0.25:
-        continue
-    centro = (y1 + y2) / 2
-    if centro < altura * 0.3:
-        continue
+response = requests.post(url, files={"file": image_bytes})
 
-    # recorta região do torso
-    torso = image[y1:y1+100, x1:x2]
-    cv2.imwrite("recorte_torso.jpg", torso)
+data = response.json()
+image = cv2.imread(IMAGE_PATH)
 
-    # pré-processamento
-    torso_resize = cv2.resize(torso, (300, 100))
-    gray = cv2.cvtColor(torso_resize, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+# Filtrar os objetos preditos que são números
+number_predictions = [pred for pred in data.get("predictions", []) if pred["class"] == "number"]
 
-    # extrai o número da camisa
-    numero = pytesseract.image_to_string(Image.fromarray(thresh), config='--psm 8 -c tessedit_char_whitelist=0123456789').strip()
-    print(f"Número: '{numero}'")
+if number_predictions:
+    for pred in number_predictions:
+        x, y, w, h = int(pred["x"]), int(pred["y"]), int(pred["width"]), int(pred["height"])
 
-    # consulta número no csv
-    if numero.isdigit() and int(numero) in jogadores['No.'].values:
-        nome_jogador = jogadores[jogadores['No.'] == int(numero)]['Player'].values[0]
-        print(f"Jogador: '{nome_jogador}'")
+        # Cortar a imagem para obter o número identificado e converter para cinza
+        cropped_number = image[y-h//2:y+h//2, x-w//2:x+w//2]
+        gray = cv2.cvtColor(cropped_number, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (5, 5), 0)
+        gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-        # escreve nome na imagem 
-        cv2.putText(image, nome_jogador, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0,255,0), 2)
-    else:
-        print("Jogador não encontrado no CSV")
+        raw_text = pytesseract.image_to_string(gray, config="--psm 7").strip()
 
-cv2.imwrite('resultado.jpg', image)
-print("Processamento concluído. Verifique 'resultado_teste.jpg' e 'recorte_torso.jpg'.")
+        match = re.search(r"\d+", raw_text)
+        recognized_number = match.group() if match else ""
+      
+        if recognized_number.isdigit():
+            detected_number = int(recognized_number)
+            #Encontrar o jogador com o número identificado no .CSV
+            player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
+
+            if(len(player_name) > 0):
+                print(f"Jogador: {player_name[0]}, Numero: {detected_number}")
+                cv2.putText(image, f"{player_name[0]} ({detected_number})", (x-120, y+120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv2.rectangle(image, (x-w//2, y-h//2), (x+w//2, y+h//2), (0, 0, 255), 2)
+                cv2.imwrite('resultado.jpg', image)
+            else:
+             print(f"Jogador não encontrado, Numero: {detected_number}")
+else:
+    print("Nenhum numero identificado na imagem")
