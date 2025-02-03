@@ -8,7 +8,7 @@ import re
 
 API_KEY = config.ROBOFLOW_API_KEY # Altere para sua chave de API Roboflow
 MODEL_ID = "custom-workflow-object-detection-h43rn/3"
-IMAGE_PATH = "images/Celtics_2.jpg"
+IMAGE_PATH = "images/Celtics_1.jpg"
 jogadores = pandas.read_csv('BostonCelticsRoster.csv')
 
 url = f"https://detect.roboflow.com/{MODEL_ID}?api_key={API_KEY}"
@@ -33,12 +33,13 @@ if number_predictions:
         gray = cv2.cvtColor(cropped_number, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
         gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        gray = cv2.resize(gray, (gray.shape[1] * 2, gray.shape[0] * 2))
 
         raw_text = pytesseract.image_to_string(gray, config="--psm 7").strip()
 
         match = re.search(r"\d+", raw_text)
         recognized_number = match.group() if match else ""
-      
+        print(f"OCR detectou: '{raw_text}', Número extraído: '{recognized_number}'")
         if recognized_number.isdigit():
             detected_number = int(recognized_number)
             #Encontrar o jogador com o número identificado no .CSV
@@ -46,7 +47,7 @@ if number_predictions:
 
             if(len(player_name) > 0):
                 print(f"Jogador: {player_name[0]}, Numero: {detected_number}")
-                cv2.putText(image, f"{player_name[0]} ({detected_number})", (x-120, y+120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv2.putText(image, f"{player_name[0]} ({detected_number})", (x-120, y+120), cv2.FONT_ITALIC, 1, (0, 0, 255), 3)
                 cv2.rectangle(image, (x-w//2, y-h//2), (x+w//2, y+h//2), (0, 0, 255), 2)
                 cv2.imwrite('resultado.jpg', image)
             else:
