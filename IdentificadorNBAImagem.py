@@ -1,7 +1,3 @@
-import nba_api.stats
-import nba_api.stats.endpoints
-import nba_api.stats.static
-import nba_api.stats.static.players
 import config
 import requests
 import pandas
@@ -9,7 +5,7 @@ import cv2
 import pytesseract
 import numpy as np
 import re
-import nba_api
+from nba_api.stats.endpoints.commonteamroster import CommonTeamRoster
 
 API_KEY = config.ROBOFLOW_API_KEY # Altere para sua chave de API Roboflow
 MODEL_ID = "custom-workflow-object-detection-h43rn/3"
@@ -52,7 +48,7 @@ if number_predictions:
             #player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
 
             # Relacionar o numero com o nome do jogador atraves da API da NBA
-            roster = nba_api.stats.endpoints.commonteamroster.CommonTeamRoster(team_id=team_id).get_dict()
+            roster = CommonTeamRoster(team_id=team_id).get_dict()
             players = roster['resultSets'][0]['rowSet']
             player_name = None
             for player in players:
