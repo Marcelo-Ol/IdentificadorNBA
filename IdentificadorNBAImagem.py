@@ -1,3 +1,7 @@
+import nba_api.stats
+import nba_api.stats.endpoints
+import nba_api.stats.static
+import nba_api.stats.static.players
 import config
 import requests
 import pandas
@@ -5,11 +9,13 @@ import cv2
 import pytesseract
 import numpy as np
 import re
+import nba_api
 
 API_KEY = config.ROBOFLOW_API_KEY # Altere para sua chave de API Roboflow
 MODEL_ID = "custom-workflow-object-detection-h43rn/3"
-IMAGE_PATH = "images/Celtics_1.jpg"
+IMAGE_PATH = "images/Celtics_5.jpg"
 jogadores = pandas.read_csv('BostonCelticsRoster.csv')
+team_id = 1610612738  # Exemplo: Boston Celtics
 
 url = f"https://detect.roboflow.com/{MODEL_ID}?api_key={API_KEY}"
 
@@ -43,14 +49,20 @@ if number_predictions:
         if recognized_number.isdigit():
             detected_number = int(recognized_number)
             #Encontrar o jogador com o número identificado no .CSV
-            player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
+            #player_name = jogadores[jogadores["No."] == detected_number]["Player"].values
 
-            if(len(player_name) > 0):
-                print(f"Jogador: {player_name[0]}, Numero: {detected_number}")
-                cv2.putText(image, f"{player_name[0]} ({detected_number})", (x-120, y+120), cv2.FONT_ITALIC, 1, (0, 0, 255), 3)
-                cv2.rectangle(image, (x-w//2, y-h//2), (x+w//2, y+h//2), (0, 0, 255), 2)
-                cv2.imwrite('resultado.jpg', image)
-            else:
-             print(f"Jogador não encontrado, Numero: {detected_number}")
+            # Relacionar o numero com o nome do jogador atraves da API da NBA
+            roster = nba_api.stats.endpoints.commonteamroster.CommonTeamRoster(team_id=team_id).get_dict()
+            players = roster['resultSets'][0]['rowSet']
+            player_name = None
+            for player in players:
+                if str(player[6]) == str(detected_number):
+                    player_name = player[3]
+           
+            print(f"Jogador: {player_name}, Numero: {detected_number}")
+            cv2.putText(image, f"{player_name} ({detected_number})", (x-120, y+120), cv2.FONT_ITALIC, 1, (0, 0, 255), 3)
+            cv2.rectangle(image, (x-w//2, y-h//2), (x+w//2, y+h//2), (0, 0, 255), 2)
+            cv2.imwrite('resultado.jpg', image)
+            
 else:
     print("Nenhum numero identificado na imagem")
