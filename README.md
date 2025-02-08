@@ -1,30 +1,48 @@
-# Reconhecimento de Jogadores da NBA em Clipes de Jogo 🏀
+# Reconhecimento de Jogadores da NBA em Imagens 🏀
 
-Este projeto utiliza visão computacional e OCR para identificar jogadores da NBA em clipes de jogo, exibindo seus nomes em tempo real. 
+Este projeto utiliza **visão computacional**, **OCR** e a **NBA API** para identificar jogadores do Boston Celtics a partir de imagens, exibindo seus nomes com base no número da camisa.
 
-## Funcionalidades
+## 🚀 Funcionalidades
+✅ **Detecção de números**: Usa um modelo de visão computacional para identificar os números nas camisas.  
+✅ **Reconhecimento de texto (OCR)**: Converte a imagem do número para texto usando **Tesseract OCR**.  
+✅ **Mapeamento de jogadores**: Relaciona o número identificado com o nome do jogador utilizando a **NBA API**.  
+✅ **Anotação da imagem**: Exibe o nome do jogador e destaca a região detectada na imagem. 
 
-- 🎥 **Processamento de vídeo**: Carrega e exibe clipes da NBA.
-- 👤 **Detecção de jogadores**: Usa YOLOv8 para localizar jogadores em cada frame.
-- 🔢 **Reconhecimento de números**: Extrai o número da camisa com Tesseract OCR.
-- 📊 **Consulta de dados**: Mapeia número e time para o nome do jogador usando um arquivo CSV.
-
-## Tecnologias
-
+## 🛠️ Tecnologias Utilizadas
 - **Python** (linguagem principal)
-- **OpenCV** (processamento de vídeo)
-- **YOLOv8** (detecção de objetos)
-- **Tesseract OCR** (leitura de números)
-- **Pandas** (gerenciamento do banco de dados de jogadores)
+- **OpenCV** (processamento de imagem)
+- **Roboflow API** (modelo de detecção de números)
+- **Tesseract OCR** (extração de texto)
+- **NBA API** (obtenção dos nomes dos jogadores)
+- **Pandas** (manipulação de dados do elenco)
 
-## Instalação
+## 📥 Instalação e Uso
 
 1. **Clone o repositório**:
-   ```bash
+   ```sh
    git clone https://github.com/Marcelo-Ol/IdentificadorNBA.git
    cd IdentificadorNBA
+   ```
 
 2. **Instale as dependências**:
+```sh
+pip install opencv-python pytesseract pandas requests nba_api
+```
 
-```bash
-pip install opencv-python ultralytics pytesseract pandas
+3. **Configure a API Key da Roboflow**:
+Crie um arquivo config.py e adicione sua chave:
+```python
+ROBOFLOW_API_KEY = "SUA_CHAVE_AQUI"
+```
+
+4. **Execute o código**:
+```sh
+python IdentificadorNBAimagem.py
+```
+
+O script processará a imagem, identificará o número da camisa e exibirá o nome do jogador correspondente.
+
+## 📌 Próximos Passos
+- Suporte para mais times além do Boston Celtics.
+- Melhorias na detecção e OCR para aumentar a precisão.
+- Processamento de vídeos, além de imagens estáticas.
